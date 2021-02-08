@@ -21,9 +21,12 @@ def send_message(access_token, Datas):
     headers = {"Authorization": "Bearer " + access_token}
     message = "再販あり\n"
     for Key in Datas.keys():
-        message += f"東京ディズニー{Key}\n"
+        if len(Datas[Key]):
+            message += f"東京ディズニー{Key}\n"
         for Data in Datas[Key]:
             message += f"{Data}\n"
+    message += "以下のURLに記載されて居る日本語の部分を数値に置き換えてサイトに飛ぶことで直接移動できます。\n"
+    message += "https://reserve.tokyodisneyresort.jp/sp/ticket/search/?parkTicketGroupCd=01&route=2&selectParkDay1=ランドなら01シー02&useDays=1&numOfJunior=中人の人数&useDateFrom=年月日&parkTicketSalesForm=1&numOfAdult=大人の人数&numOfChild=0少人の人数"
     payload = {"message": message}
 
     rq.post(url, headers=headers, params=payload)
