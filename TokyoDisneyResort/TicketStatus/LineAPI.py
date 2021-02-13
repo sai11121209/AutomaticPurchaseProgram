@@ -47,7 +47,7 @@ def job():
 job()
 
 # 1分ごとに実行
-schedule.every(1).minutes.do(job)
+schedule.every(5).minutes.do(job)
 
 
 while True:
