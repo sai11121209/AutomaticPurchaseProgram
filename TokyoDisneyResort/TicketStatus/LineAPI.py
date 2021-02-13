@@ -27,10 +27,7 @@ def send_message(access_token, Datas):
             message += f"{Data}\n"
     payload = {"message": message}
     rq.post(url, headers=headers, params=payload)
-    message = "以下のURLに記載されて居る日本語の部分(2項目)を数値に置き換えてサイトに飛ぶことで直接移動できます。"
-    payload = {"message": message}
-    rq.post(url, headers=headers, params=payload)
-    message = "https://reserve.tokyodisneyresort.jp/sp/ticket/search/?parkTicketGroupCd=01&route=2&selectParkDay1=ランドなら01シーなら02&useDays=1&useDateFrom=年(西暦)月(2桁)日(2桁)&parkTicketSalesForm=1"
+    message = "https://reserve.tokyodisneyresort.jp/sp/ticket/search/?parkTicketGroupCd=01&route=2&useDays=1"
     payload = {"message": message}
     rq.post(url, headers=headers, params=payload)
 
