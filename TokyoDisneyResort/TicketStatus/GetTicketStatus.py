@@ -1,4 +1,5 @@
 import json
+import sys
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta
@@ -42,33 +43,30 @@ def GTS():
         + datetime.timedelta(days=1)
         + relativedelta(months=1)
     )
-    for Key, Value in ParksPara.items():
-        for n in range((end - start).days):
-            try:
-                check = start + timedelta(n)
-                files = parse.urlencode(
-                    {
-                        "_xhr": "",
-                        "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
-                        "commodityCd": Value,
-                    }
-                )
-                req = request.Request(url, data=files.encode(), headers=headers)
-                with request.urlopen(req) as res:
-                    body = json.loads(res.read().decode("utf8"))
-                    print(body)
-                try:
-                    if body["saleStatusEticket"] == "1":
-                        Available[Key].append(
-                            f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
-                        )
-                        print(
-                            f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
-                        )
-                except:
-                    print(body)
-            except:
-                pass
+    try:
+      for Key, Value in ParksPara.items():
+          for n in range((end - start).days):
+              check = start + timedelta(n)
+              files = parse.urlencode(
+                  {
+                      "_xhr": "",
+                      "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
+                      "commodityCd": Value,
+                  }
+              )
+              req = request.Request(url, data=files.encode(), headers=headers)
+              with request.urlopen(req) as res:
+                  body = json.loads(res.read().decode("utf8"))
+                  print(body)
+              if body["saleStatusEticket"] == "1":
+                  Available[Key].append(
+                      f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
+                  )
+                  print(
+                      f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
+                  )
+    except:
+      print(sys.exc_info())
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
         print("Aend")
         return Available
