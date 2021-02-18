@@ -18,5 +18,7 @@ def keep_alive():
     server.start()
 
 
+# ポート番号の設定
 if __name__ == "__main__":
-    pass
+    port = int(os.getenv("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)

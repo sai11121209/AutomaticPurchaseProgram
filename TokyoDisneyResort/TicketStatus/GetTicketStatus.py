@@ -9,7 +9,6 @@ from urllib import request, parse
 
 
 def GTS():
-    url = "https://api.line.me/v2/bot/message/reply"
 
     headers = {
         "Host": "reserve.tokyodisneyresort.jp",
@@ -44,35 +43,38 @@ def GTS():
         + relativedelta(months=1)
     )
     try:
-      for Key, Value in ParksPara.items():
-          for n in range((end - start).days):
-              check = start + timedelta(n)
-              files = parse.urlencode(
-                  {
-                      "_xhr": "",
-                      "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
-                      "commodityCd": Value,
-                  }
-              )
-              req = request.Request(url, data=files.encode(), headers=headers)
-              with request.urlopen(req) as res:
-                  body = json.loads(res.read().decode("utf8"))
-                  print(body)
-              if body["saleStatusEticket"] == "1":
-                  Available[Key].append(
-                      f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
-                  )
-                  print(
-                      f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
-                  )
+        for Key, Value in ParksPara.items():
+            for n in range((end - start).days):
+                check = start + timedelta(n)
+                files = parse.urlencode(
+                    {
+                        "_xhr": "",
+                        "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
+                        "commodityCd": Value,
+                    }
+                )
+                req = request.Request(url, data=files.encode(), headers=headers)
+                with request.urlopen(req) as res:
+                    body = json.loads(res.read().decode("utf8"))
+                    print(body)
+                if body["saleStatusEticket"] == "1":
+                    Available[Key].append(
+                        f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
+                    )
+                    print(
+                        f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
+                    )
+    except KeyError:
+        return (3, "ServerError")
     except:
-      print(sys.exc_info())
+        print(sys.exc_info())
+        return (2, sys.exc_info())
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
-        print("Aend")
-        return Available
+        print("Available")
+        return (1, Available)
     else:
-        print("Bend")
-        return None
+        print("NoAvailable")
+        return (0, "NoAvailable")
 
 
 if __name__ == "__main__":
