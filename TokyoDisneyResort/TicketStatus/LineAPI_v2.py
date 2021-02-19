@@ -54,19 +54,23 @@ def main():
         if LastExecutionTime:
             LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
             Text += "<h1>ステータス: <font color='lime'>●</font></h1>"
-            Text += f"<h2>現在{ObservationTime}分間隔で正常に監視を行っております。</h2>"
+            if ResponseTimeMin - ResponseTime <= 3:
+                Text += f"<h2>現在{ObservationTime}分間隔で正常に監視を行っております。</h2>"
+            elif ResponseTimeMin - ResponseTime >= 20:
+                Text += f"<h2>現在{ObservationTime}分間隔で監視を行っておりますが通常時に比べレスポンス時間が長くなっておりサイトの混雑が予想されます。</h2>"
             Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
-            Text += "<h3>最終監視結果</h3>"
-            Text += f"全リクエスト完了タイム: {ResponseTime}"
-            Text += f"全リクエスト完了最短タイム: {ResponseTimeMin}"
-            Text += f"全リクエスト完了差分タイム: {ResponseTimeMin - ResponseTime}"
+            Text += "<h3>Response Information</h3>"
+            Text += f"<p>Response Time: {ResponseTime}<br>"
+            Text += f"Minimum Response Time: {ResponseTimeMin}<br>"
+            Text += f"Response Time Differential: {ResponseTime - ResponseTimeMin}</p>"
+            Text += "<h3>Response Details</h3>"
             if type(LastObservationResults) != str:
                 for Key, Values in LastObservationResults.items():
                     Text += f"<h4>{Key}</h4>"
                     for Value in Values:
                         Text += f"<p>{Value}</p>"
             else:
-                Text += f"<h4>{LastObservationResults}</h4>"
+                Text += f"<p>{LastObservationResults}</p>"
         else:
             Text += "<h1>ステータス: <font color='gray'>●</font></h1>"
             Text += "<h2>現在起動中です。</h2>"
