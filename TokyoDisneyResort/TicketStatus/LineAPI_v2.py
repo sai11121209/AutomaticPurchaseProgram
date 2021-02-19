@@ -39,7 +39,11 @@ LastObservationResults = None
 
 ObservationRestarttime = None
 ObservationStatus = True
-ObservationTime = 1
+ObservationTime = 0
+BaseObservationTime = 1
+
+ResponseTime = 0
+ResponseTimeMin = 99999999
 
 
 @app.route("/")
@@ -50,9 +54,12 @@ def main():
         if LastExecutionTime:
             LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
             Text += "<h1>ステータス: <font color='lime'>●</font></h1>"
-            Text += "<h2>現在正常に監視を行っております。</h2>"
+            Text += f"<h2>現在{ObservationTime}分間隔で正常に監視を行っております。</h2>"
             Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
-            Text += f"<h3>最終監視結果</h3>"
+            Text += "<h3>最終監視結果</h3>"
+            Text += f"全リクエスト完了タイム: {ResponseTime}"
+            Text += f"全リクエスト完了最短タイム: {ResponseTimeMin}"
+            Text += f"全リクエスト完了差分タイム: {ResponseTimeMin - ResponseTime}"
             if type(LastObservationResults) != str:
                 for Key, Values in LastObservationResults.items():
                     Text += f"<h4>{Key}</h4>"
@@ -68,14 +75,14 @@ def main():
             "%Y/%m/%d %H:%M:%S"
         )
         if ObservationTime == 120:
-            Text += "<h1>ステータス: <font color='red'>●</font></h1>"
+            Text += "<h1>ステータス: <font color='red'>▲</font></h1>"
             Text += "<h2>現在東京ディズニーリゾートオンライン予約・購入サイトのメンテナンスのため監視を一時停止しております。</h2>"
             Text += f"<h2>監視再開予定時刻: {ObservationRestarttimeToStr}\n</h2>"
             if LastExecutionTime:
                 LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
                 Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
         else:
-            Text += "<h1>ステータス: <font color='red'>●</font></h1>"
+            Text += "<h1>ステータス: <font color='red'>✖︎</font></h1>"
             Text += (
                 "<h2>現在東京ディズニーリゾートオンライン予約・購入サイトへのアクセス集中による403エラー回避のため一時停止しております。</h2>"
             )
@@ -157,22 +164,31 @@ def StateSwitch():
 
 
 def job():
-    global ObservationStatus, ObservationTime, LastExecutionTime, ObservationRestarttime, LastObservationResults
+    global ObservationStatus, ObservationTime, LastExecutionTime, ObservationRestarttime, LastObservationResults, BaseObservationTime,ResponseTime, ResponseTimeMin
     if ObservationStatus == False:
         ObservationStatus = True
         StateSwitch()
-    Status, Datas = GTS()
+    Status, ResponseTime, Datas = GTS()
     Action(Status, Datas)
+    if ResponseTime < ResponseTimeMin:
+        ResponseTimeMin = ResponseTime
     if Status == 3:
         ObservationStatus = False
         ObservationTime = 120
-        ObservationRestarttime = datetime.now(JST) + dt.timedelta(hours=2)
+        schedule.clear()
+        schedule.every(ObservationTime).minutes.do(job)
+        ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
     elif Status == 2:
         ObservationStatus = False
         ObservationTime = 60
-        ObservationRestarttime = datetime.now(JST) + dt.timedelta(hours=1)
+        schedule.clear()
+        schedule.every(ObservationTime).minutes.do(job)
+        ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
     else:
         LastObservationResults = Datas
+        ObservationTime = BaseObservationTime
+        schedule.clear()
+        schedule.every(ObservationTime).minutes.do(job)
         LastExecutionTime = datetime.now(JST)
 
 
@@ -181,8 +197,10 @@ if __name__ == "__main__":
     server = Thread(target=run)
     server.start()
 
-    job()
-
+    #job()
+    ObservationTime = BaseObservationTime
+    #messages = TextSendMessage(text=f"再販監視が開始されました。(監視周期: {ObservationTime}分)")
+    #line_bot_api.broadcast(messages=messages)
     # 1分ごとに実行
     schedule.every(ObservationTime).minutes.do(job)
 

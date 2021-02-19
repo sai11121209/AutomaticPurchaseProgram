@@ -1,12 +1,12 @@
 import json
 import sys
+import time
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 import pytz
 from urllib import request, parse
-
 
 def GTS():
 
@@ -36,6 +36,7 @@ def GTS():
         "シー": "TOZZ1D20911PT",
     }
     url = "https://reserve.tokyodisneyresort.jp/ticket/ajax/checkSaleable/"
+    ResponseTimeStart = time.time()
     start = dt.now(pytz.timezone("Asia/Tokyo")) + datetime.timedelta(days=1)
     end = (
         dt.now(pytz.timezone("Asia/Tokyo"))
@@ -65,16 +66,26 @@ def GTS():
                         f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
                     )
     except KeyError:
-        return (3, "ServerError")
+        ResponseTimeEnd = time.time()
+        ResponseTime = ResponseTimeEnd-ResponseTimeStart
+        return (3, ResponseTime, "ServerError")
     except:
+        ResponseTimeEnd = time.time()
+        ResponseTime = ResponseTimeEnd-ResponseTimeStart
         print(sys.exc_info())
-        return (2, sys.exc_info())
+        return (2, ResponseTime, sys.exc_info())
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
+        ResponseTimeEnd = time.time()
+        ResponseTime = ResponseTimeEnd-ResponseTimeStart
         print("Available")
-        return (1, Available)
+        # 経過時間を表示
+        elapsed_time = t2-t1
+        return (1, ResponseTime, Available)
     else:
+        ResponseTimeEnd = time.time()
+        ResponseTime = ResponseTimeEnd-ResponseTimeStart
         print("NoAvailable")
-        return (0, "NoAvailable")
+        return (0, ResponseTime, "NoAvailable")
 
 
 if __name__ == "__main__":
