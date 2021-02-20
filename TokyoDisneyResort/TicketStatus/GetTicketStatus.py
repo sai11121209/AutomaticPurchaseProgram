@@ -40,7 +40,6 @@ def GTS():
     start = dt.now(pytz.timezone("Asia/Tokyo")) + datetime.timedelta(days=1)
     end = (
         dt.now(pytz.timezone("Asia/Tokyo"))
-        + datetime.timedelta(days=1)
         + relativedelta(months=1)
     )
     try:

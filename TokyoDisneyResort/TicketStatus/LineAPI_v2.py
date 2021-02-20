@@ -40,7 +40,7 @@ LastObservationResults = None
 ObservationRestarttime = None
 ObservationStatus = True
 ObservationTime = 0
-BaseObservationTime = 1
+BaseObservationTime = 5
 
 ResponseTime = 0
 ResponseTimeMin = 99999999
@@ -148,7 +148,7 @@ def Action(Status, Datas):
         line_bot_api.broadcast(messages=messages)
     elif Status == 2:
         messages = TextSendMessage(text="アクセス集中による403エラー回避のため1時間監視を停止します。")
-        line_bot_api.broadcast(messages=messages)
+        #line_bot_api.broadcast(messages=messages)
     elif Status == 1:
         message = "再販あり\n"
         for Key in Datas.keys():
@@ -201,10 +201,10 @@ if __name__ == "__main__":
     server = Thread(target=run)
     server.start()
 
-    #job()
+    job()
     ObservationTime = BaseObservationTime
-    #messages = TextSendMessage(text=f"再販監視が開始されました。(監視周期: {ObservationTime}分)")
-    #line_bot_api.broadcast(messages=messages)
+    messages = TextSendMessage(text=f"再販監視が開始されました。(監視周期: {ObservationTime}分)")
+    line_bot_api.broadcast(messages=messages)
     # 1分ごとに実行
     schedule.every(ObservationTime).minutes.do(job)
 
