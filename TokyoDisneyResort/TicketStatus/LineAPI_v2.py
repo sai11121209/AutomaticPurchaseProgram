@@ -45,10 +45,12 @@ BaseObservationTime = 5
 ResponseTime = 0
 ResponseTimeMin = 99999999
 
+ExceptionInformation=None
+
 
 @app.route("/")
 def main():
-    global LastObservationResults
+    global LastObservationResults, ExceptionInformation
     Text = "<title>東京ディズニーリゾートチケット再販通知ステータス</title>"
     if ObservationStatus:
         if LastExecutionTime:
@@ -85,6 +87,8 @@ def main():
             if LastExecutionTime:
                 LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
                 Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
+            Text += "<h3>Response Details</h3>"
+            Text += f"<p> {ExceptionInformation}</p>"
         else:
             Text += "<h1>ステータス: <font color='red'>✖︎</font></h1>"
             Text += (
@@ -94,6 +98,8 @@ def main():
             if LastExecutionTime:
                 LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
                 Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
+            Text += "<h3>Response Details</h3>"
+            Text += f"<p> {ExceptionInformation}</p>"
     return Text
 
 
@@ -148,7 +154,7 @@ def Action(Status, Datas):
         line_bot_api.broadcast(messages=messages)
     elif Status == 2:
         messages = TextSendMessage(text="アクセス集中による403エラー回避のため1時間監視を停止します。")
-        #line_bot_api.broadcast(messages=messages)
+        line_bot_api.broadcast(messages=messages)
     elif Status == 1:
         message = "再販あり\n"
         for Key in Datas.keys():
@@ -168,7 +174,7 @@ def StateSwitch():
 
 
 def job():
-    global ObservationStatus, ObservationTime, LastExecutionTime, ObservationRestarttime, LastObservationResults, BaseObservationTime,ResponseTime, ResponseTimeMin
+    global ObservationStatus, ObservationTime, LastExecutionTime, ObservationRestarttime, LastObservationResults, BaseObservationTime,ResponseTime, ResponseTimeMin, ExceptionInformation
     if ObservationStatus == False:
         ObservationStatus = True
         StateSwitch()
@@ -182,12 +188,14 @@ def job():
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
         ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
+        ExceptionInformation = Datas
     elif Status == 2:
         ObservationStatus = False
         ObservationTime = 60
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
         ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
+        ExceptionInformation = Datas
     else:
         LastObservationResults = Datas
         ObservationTime = BaseObservationTime

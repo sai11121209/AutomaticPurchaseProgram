@@ -42,8 +42,8 @@ def GTS():
         dt.now(pytz.timezone("Asia/Tokyo"))
         + relativedelta(months=1)
     )
-    try:
-        for Key, Value in ParksPara.items():
+    for Key, Value in ParksPara.items():
+        try:
             for n in range((end - start).days):
                 check = start + timedelta(n)
                 files = parse.urlencode(
@@ -64,15 +64,18 @@ def GTS():
                     print(
                         f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
                     )
-    except KeyError:
-        ResponseTimeEnd = time.time()
-        ResponseTime = ResponseTimeEnd-ResponseTimeStart
-        return (3, ResponseTime, "ServerError")
-    except:
-        ResponseTimeEnd = time.time()
-        ResponseTime = ResponseTimeEnd-ResponseTimeStart
-        print(sys.exc_info())
-        return (2, ResponseTime, sys.exc_info())
+        except KeyError:
+            ResponseTimeEnd = time.time()
+            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            return (3, ResponseTime, "ServerError")
+                
+        except UnicodeDecodeError:
+            print(sys.exc_info())
+        except:
+            ResponseTimeEnd = time.time()
+            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            print(sys.exc_info())
+            return (2, ResponseTime, sys.exc_info())
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
         ResponseTimeEnd = time.time()
         ResponseTime = ResponseTimeEnd-ResponseTimeStart
