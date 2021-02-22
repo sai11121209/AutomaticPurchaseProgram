@@ -40,7 +40,7 @@ LastObservationResults = None
 ObservationRestarttime = None
 ObservationStatus = True
 ObservationTime = 0
-BaseObservationTime = 5
+BaseObservationTime = 1
 
 ResponseTime = 0
 ResponseTimeMin = 99999999
@@ -83,6 +83,15 @@ def main():
         if ObservationTime == 120:
             Text += "<h1>ステータス: <font color='red'>▲</font></h1>"
             Text += "<h2>現在東京ディズニーリゾートオンライン予約・購入サイトのメンテナンスのため監視を一時停止しております。</h2>"
+            Text += f"<h2>監視再開予定時刻: {ObservationRestarttimeToStr}\n</h2>"
+            if LastExecutionTime:
+                LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
+                Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
+            Text += "<h3>Response Details</h3>"
+            Text += f"<p> {ExceptionInformation}</p>"
+        elif ObservationTime == 20:
+            Text += "<h1>ステータス: <font color='red'>▲</font></h1>"
+            Text += "<h2>現在東京ディズニーリゾートオンライン予約・購入サイトへのリクエスト時間が長くなっているため監視を一時停止しております。再販の可能性もあるため予約・購入サイトへのアクセスをおすすめします。</h2>"
             Text += f"<h2>監視再開予定時刻: {ObservationRestarttimeToStr}\n</h2>"
             if LastExecutionTime:
                 LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
@@ -149,8 +158,11 @@ def handle_message(event):
 
 
 def Action(Status, Datas):
-    if Status == 3:
+    if Status == 4:
         messages = TextSendMessage(text="サーバメンテナンス中のため2時間監視を停止します。")
+        line_bot_api.broadcast(messages=messages)
+    elif Status == 3:
+        messages = TextSendMessage(text="サーバへのリクエスト時間が非常に長くなっています。再販の可能性あり。")
         line_bot_api.broadcast(messages=messages)
     elif Status == 2:
         messages = TextSendMessage(text="アクセス集中による403エラー回避のため1時間監視を停止します。")
@@ -182,9 +194,16 @@ def job():
     Action(Status, Datas)
     if ResponseTime < ResponseTimeMin:
         ResponseTimeMin = ResponseTime
-    if Status == 3:
+    if Status == 4:
         ObservationStatus = False
         ObservationTime = 120
+        schedule.clear()
+        schedule.every(ObservationTime).minutes.do(job)
+        ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
+        ExceptionInformation = Datas
+    elif Status == 3:
+        ObservationStatus = False
+        ObservationTime = 20
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
         ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)

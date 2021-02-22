@@ -1,6 +1,7 @@
 import json
 import sys
 import time
+import socket
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta
@@ -54,7 +55,7 @@ def GTS():
                     }
                 )
                 req = request.Request(url, data=files.encode(), headers=headers)
-                with request.urlopen(req) as res:
+                with request.urlopen(req, timeout=20) as res:
                     body = json.loads(res.read().decode("utf8"))
                     print(body)
                 if body["saleStatusEticket"] == "1":
@@ -67,10 +68,15 @@ def GTS():
         except KeyError:
             ResponseTimeEnd = time.time()
             ResponseTime = ResponseTimeEnd-ResponseTimeStart
-            return (3, ResponseTime, "ServerError")
+            return (4, ResponseTime, "ServerError")
                 
         except UnicodeDecodeError:
             print(sys.exc_info())
+        except socket.timeout:
+            ResponseTimeEnd = time.time()
+            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            print(sys.exc_info())
+            return (3, ResponseTime, sys.exc_info())
         except:
             ResponseTimeEnd = time.time()
             ResponseTime = ResponseTimeEnd-ResponseTimeStart
