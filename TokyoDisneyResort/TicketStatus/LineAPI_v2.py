@@ -66,6 +66,8 @@ def main():
                 Text += f"<h2>現在{ObservationTime}分間隔で正常に監視を行っております。</h2>"
             elif ResponseTimeMin - ResponseTime >= 20:
                 Text += f"<h2>現在{ObservationTime}分間隔で監視を行っておりますが通常時に比べレスポンス時間が長くなっておりサイトの混雑が予想されます。</h2>"
+            Text += f"<p>本Botは基本的に{BaseObservationTime}分間隔で再販監視を行っておりますが、サーバへの負荷を最小限に抑えるため{start_str}～{end_str}は{LowObservationTime}分間隔で監視を行っております。</p>"
+            Text += f"<p>現在{BaseObservationTime}分間隔で監視を行っておりますが通常時に比べレスポンス時間が長くなっておりサイトの混雑が予想されます。</p>"
             Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
             Text += "<h3>Response Information</h3>"
             Text += f"<p>Response Time: {ResponseTime}<br>"
