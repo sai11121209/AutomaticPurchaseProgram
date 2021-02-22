@@ -41,6 +41,12 @@ ObservationRestarttime = None
 ObservationStatus = True
 ObservationTime = 0
 BaseObservationTime = 1
+LowObservationTime = 5
+
+start_str = '00:00:00'
+end_str = '12:00:00'
+start = dt.datetime.strptime(start_str, '%H:%M:%S')
+end = dt.datetime.strptime(end_str, '%H:%M:%S')
 
 ResponseTime = 0
 ResponseTimeMin = 99999999
@@ -222,10 +228,15 @@ def job():
         ExceptionInformation = Datas
     else:
         LastObservationResults = Datas
-        ObservationTime = BaseObservationTime
+        now = dt.datetime.now()
+        if start.time() <= now.time() <= end.time():
+            ObservationTime = LowObservationTime
+        else:
+            ObservationTime = BaseObservationTime
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
         LastExecutionTime = datetime.now(JST)
+
 
 
 # ポート番号の設定
