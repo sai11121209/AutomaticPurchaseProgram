@@ -1,15 +1,23 @@
 import json
 import sys
 import time
-import socket
+import queue
+import pytz
+import threading
+import requests
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-import pytz
-from urllib import request, parse
+from urllib import parse
+
+
 
 def GTS():
+    def query_worker(query_queue):
+        query = query_queue.get()
+        responses.append({"response": requests.post(url, data=parse.urlencode(query).encode(), headers=headers), "useDateFrom": query["useDateFrom"], "commodityCd": query["commodityCd"]})
+        query_queue.task_done()
 
     headers = {
         "Host": "reserve.tokyodisneyresort.jp",
@@ -37,57 +45,77 @@ def GTS():
         "シー": "TOZZ1D20911PT",
     }
     url = "https://reserve.tokyodisneyresort.jp/ticket/ajax/checkSaleable/"
+    table_datas = []
+    responses = []
     ResponseTimeStart = time.time()
     start = dt.now(pytz.timezone("Asia/Tokyo")) + datetime.timedelta(days=1)
     end = (
         dt.now(pytz.timezone("Asia/Tokyo"))
         + relativedelta(months=1)
     )
-    for Key, Value in ParksPara.items():
+    table_datas = []
+
+    for Value in ParksPara.values():
+        for n in range((end - start).days):
+            check = start + timedelta(n)
+            table_datas.append({
+                    "_xhr": "",
+                    "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
+                    "commodityCd": Value,
+                })
+
+    # queueを設定
+    query_queue = queue.Queue()
+    for table_data in table_datas:
+        query_queue.put(table_data)
+
+    # Thread start
+    while not query_queue.empty():
+        w_thread = threading.Thread(target=query_worker, args=(query_queue,))
+        w_thread.start()
+
+    # wait all thread are ended.
+    query_queue.join()
+
+    for res in responses:
         try:
-            for n in range((end - start).days):
-                check = start + timedelta(n)
-                files = parse.urlencode(
-                    {
-                        "_xhr": "",
-                        "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
-                        "commodityCd": Value,
-                    }
+            res["response"].raise_for_status()
+            if res.get("error"):
+                ResponseTimeEnd = time.time()
+                ResponseTime = ResponseTimeEnd-ResponseTimeStart
+                print("ReadTimeout")
+                return (3, ResponseTime, res["error"])
+            elif res["response"].json()["saleStatusEticket"] == "1":
+                check = {
+                    "year": res["useDateFrom"][:4],
+                    "month": res["useDateFrom"][4:6],
+                    "day": res["useDateFrom"][6:],
+                }
+                Available[[Key for Key, Value in ParksPara.items() if Value == res["commodityCd"]][0]].append(
+                    check["year"] + "/" + check["month"].zfill(2) +"/" + check["day"].zfill(2)
                 )
-                req = request.Request(url, data=files.encode(), headers=headers)
-                with request.urlopen(req, timeout=20) as res:
-                    body = json.loads(res.read().decode("utf8"))
-                    print(body)
-                if body["saleStatusEticket"] == "1":
-                    Available[Key].append(
-                        f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
-                    )
-                    print(
-                        f"{check.year}/{str(check.month).zfill(2)}/{str(check.day).zfill(2)}"
-                    )
+                print(
+                    check["year"] + "/" + check["month"].zfill(2) +"/" + check["day"].zfill(2)
+                )
+        # 403等の処理
+        except requests.exceptions.RequestException as e:
+            print(e)
+            ResponseTimeEnd = time.time()
+            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            if e.response.status_code == 403:
+                return (2, ResponseTime, e)
+        except  json.decoder.JSONDecodeError:
+            print(sys.exc_info())
         except KeyError:
+            print("Server Maintenance")
             ResponseTimeEnd = time.time()
             ResponseTime = ResponseTimeEnd-ResponseTimeStart
             return (4, ResponseTime, "ServerError")
-                
-        except UnicodeDecodeError:
-            print(sys.exc_info())
-        except socket.timeout:
-            ResponseTimeEnd = time.time()
-            ResponseTime = ResponseTimeEnd-ResponseTimeStart
-            print(sys.exc_info())
-            return (3, ResponseTime, sys.exc_info())
-        except:
-            ResponseTimeEnd = time.time()
-            ResponseTime = ResponseTimeEnd-ResponseTimeStart
-            print(sys.exc_info())
-            return (2, ResponseTime, sys.exc_info())
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
         ResponseTimeEnd = time.time()
         ResponseTime = ResponseTimeEnd-ResponseTimeStart
         print("Available")
-        # 経過時間を表示
-        elapsed_time = t2-t1
+        print(Available)
         return (1, ResponseTime, Available)
     else:
         ResponseTimeEnd = time.time()

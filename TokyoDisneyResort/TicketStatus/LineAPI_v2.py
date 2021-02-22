@@ -158,15 +158,19 @@ def handle_message(event):
 
 
 def Action(Status, Datas):
+    # 4: サーバメンテナンスパラメータ
     if Status == 4:
         messages = TextSendMessage(text="サーバメンテナンス中のため2時間監視を停止します。")
         line_bot_api.broadcast(messages=messages)
+    # 3: リクエストタイムアウトパラメータ
     elif Status == 3:
         messages = TextSendMessage(text="サーバへのリクエスト時間が非常に長くなっています。再販の可能性あり。")
         line_bot_api.broadcast(messages=messages)
+    # 2: 403エラーパラメータ
     elif Status == 2:
         messages = TextSendMessage(text="アクセス集中による403エラー回避のため1時間監視を停止します。")
         line_bot_api.broadcast(messages=messages)
+    # 1: 再販確認時パラメータ
     elif Status == 1:
         message = "再販あり\n"
         for Key in Datas.keys():
@@ -176,6 +180,7 @@ def Action(Status, Datas):
                 message += f"{Data}\n"
         messages = TextSendMessage(text=message)
         line_bot_api.broadcast(messages=messages)
+    # 0: 平常時パラメータ
     else:
         pass
 
