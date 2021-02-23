@@ -2,6 +2,7 @@ from flask import Flask, request, abort
 import requests as rq
 import schedule
 import time
+import pytz
 import datetime as dt
 from datetime import datetime, timedelta, timezone
 from GetTicketStatus import GTS
@@ -229,7 +230,7 @@ def job():
         ExceptionInformation = Datas
     else:
         LastObservationResults = Datas
-        now = dt.datetime.now()
+        now = datetime.now(pytz.timezone("Asia/Tokyo"))
         if start.time() <= now.time() <= end.time():
             ObservationTime = LowObservationTime
         else:
@@ -249,7 +250,7 @@ if __name__ == "__main__":
     ObservationTime = BaseObservationTime
     messages = TextSendMessage(text=f"再販監視が開始されました。(監視周期: {ObservationTime}分)")
     line_bot_api.broadcast(messages=messages)
-    # 1分ごとに実行
+    # {ObservationTime}分ごとに実行
     schedule.every(ObservationTime).minutes.do(job)
 
     while True:
