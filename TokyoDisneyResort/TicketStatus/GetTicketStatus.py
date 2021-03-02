@@ -4,6 +4,7 @@ import time
 import queue
 import pytz
 import threading
+import traceback
 import requests
 import datetime
 from datetime import datetime as dt
@@ -15,9 +16,17 @@ from urllib import parse
 
 def GTS():
     def query_worker(query_queue):
-        query = query_queue.get()
-        responses.append({"response": requests.post(url, data=parse.urlencode(query).encode(), headers=headers), "useDateFrom": query["useDateFrom"], "commodityCd": query["commodityCd"]})
-        query_queue.task_done()
+        try:
+            query = query_queue.get()
+            responses.append({"response": requests.post(url, data=parse.urlencode(query).encode(), headers=headers), "useDateFrom": query["useDateFrom"], "commodityCd": query["commodityCd"]})
+            query_queue.task_done()
+        except:
+            responses.append({"response": "error"})
+
+    maintenance_start_str = "03:00"
+    maintenance_end_str = "05:00"
+    maintenance_start = dt.strptime(maintenance_start_str, '%H:%M')
+    maintenance_end = dt.strptime(maintenance_end_str, '%H:%M')
 
     headers = {
         "Host": "reserve.tokyodisneyresort.jp",
@@ -104,8 +113,20 @@ def GTS():
             ResponseTime = ResponseTimeEnd-ResponseTimeStart
             if e.response.status_code == 403:
                 return (2, ResponseTime, e)
-        except  json.decoder.JSONDecodeError:
-            print(sys.exc_info())
+            else:
+                print(e)
+        except  json.decoder.JSONDecodeError as e:
+            ResponseTimeEnd = time.time()
+            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            exc = traceback.format_exception_only(type(e), e)[0].rstrip('\n')
+            if "line 8 column 1 (char 7)" in exc:
+                print(exc)
+            else:
+                now = dt.now(pytz.timezone("Asia/Tokyo"))
+                if maintenance_start.time() <= now.time() <= maintenance_end.time():
+                    return (4, ResponseTime, "ServerError")
+                else:
+                    return (3, ResponseTime, exc)
         except KeyError:
             print("Server Maintenance")
             ResponseTimeEnd = time.time()
