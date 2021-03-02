@@ -10,8 +10,10 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent,
+    ButtonsTemplate,
     TextMessage,
     TextSendMessage,
+    MessageAction,
 )
 from threading import Thread
 import os
@@ -41,7 +43,7 @@ LastObservationResults = None
 ObservationRestarttime = None
 ObservationStatus = True
 ObservationTime = 0
-BaseObservationTime = 1
+BaseObservationTime = 2
 LowObservationTime = 5
 MaintenanceObservationTime = 120
 
@@ -63,6 +65,12 @@ ExceptionInformation = None
 @app.route("/")
 def main():
     global LastObservationResults, ExceptionInformation
+    MessageLimit = int(
+        rq.get(
+            "https://api.line.me/v2/bot/message/quota/consumption",
+            headers={"Authorization": "Bearer " + YOUR_CHANNEL_ACCESS_TOKEN},
+        ).json()["totalUsage"]
+    )
     Text = "<title>東京ディズニーリゾートチケット再販通知ステータス</title>"
     if ObservationStatus:
         if LastExecutionTime:
@@ -122,6 +130,8 @@ def main():
                 Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
             Text += "<h3>Response Details</h3>"
             Text += f"<p> {ExceptionInformation}</p>"
+    Text += "<h3>Line Bot Information</h3>"
+    Text += f"<p>Message Remaining: {1000-MessageLimit}</p>"
     return Text
 
 
@@ -266,7 +276,7 @@ if __name__ == "__main__":
     server.start()
 
     messages = TextSendMessage(text=f"再販監視が開始されました")
-    line_bot_api.broadcast(messages=messages)
+    # line_bot_api.broadcast(messages=messages)
     job()
     ObservationTime = ObservationTime
     # {ObservationTime}分ごとに実行
