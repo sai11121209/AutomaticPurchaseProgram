@@ -45,19 +45,19 @@ BaseObservationTime = 1
 LowObservationTime = 5
 MaintenanceObservationTime = 120
 
-start_str = '00:00'
-end_str = '12:00'
-start = dt.datetime.strptime(start_str, '%H:%M')
-end = dt.datetime.strptime(end_str, '%H:%M')
+start_str = "00:00"
+end_str = "12:00"
+start = dt.datetime.strptime(start_str, "%H:%M")
+end = dt.datetime.strptime(end_str, "%H:%M")
 maintenance_start_str = "03:00"
 maintenance_end_str = "05:00"
-maintenance_start = dt.datetime.strptime(maintenance_start_str, '%H:%M')
-maintenance_end = dt.datetime.strptime(maintenance_end_str, '%H:%M')
+maintenance_start = dt.datetime.strptime(maintenance_start_str, "%H:%M")
+maintenance_end = dt.datetime.strptime(maintenance_end_str, "%H:%M")
 
 ResponseTime = 0
 ResponseTimeMin = 3
 
-ExceptionInformation=None
+ExceptionInformation = None
 
 
 @app.route("/")
@@ -173,15 +173,21 @@ def handle_message(event):
 def Action(Status, Datas):
     # 4: サーバメンテナンスパラメータ
     if Status == 4:
-        messages = TextSendMessage(text="サーバメンテナンス中のため2時間監視を停止します。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。")
+        messages = TextSendMessage(
+            text="サーバメンテナンス中のため2時間監視を停止します。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
+        )
         line_bot_api.broadcast(messages=messages)
     # 3: リクエストタイムアウトパラメータ
     elif Status == 3:
-        messages = TextSendMessage(text="サーバへのリクエスト時間が非常に長くなっているため40分間監視を一時停止します。\n再販の可能性あり。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。")
+        messages = TextSendMessage(
+            text="サーバへのリクエスト時間が非常に長くなっているため40分間監視を一時停止します。\n再販の可能性あり。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
+        )
         line_bot_api.broadcast(messages=messages)
     # 2: 403エラーパラメータ
     elif Status == 2:
-        messages = TextSendMessage(text="アクセス集中による403エラー回避のため1時間監視を停止します。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。")
+        messages = TextSendMessage(
+            text="アクセス集中による403エラー回避のため1時間監視を停止します。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
+        )
         line_bot_api.broadcast(messages=messages)
     # 1: 再販確認時パラメータ
     elif Status == 1:
@@ -204,7 +210,7 @@ def StateSwitch():
 
 
 def job():
-    global ObservationStatus, ObservationTime, LastExecutionTime, ObservationRestarttime, LastObservationResults, BaseObservationTime,ResponseTime, ResponseTimeMin, ExceptionInformation
+    global ObservationStatus, ObservationTime, LastExecutionTime, ObservationRestarttime, LastObservationResults, BaseObservationTime, ResponseTime, ResponseTimeMin, ExceptionInformation
     if ObservationStatus == False:
         ObservationStatus = True
         StateSwitch()
@@ -217,21 +223,27 @@ def job():
         ObservationTime = 120
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
-        ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
+        ObservationRestarttime = datetime.now(JST) + dt.timedelta(
+            minutes=ObservationTime
+        )
         ExceptionInformation = Datas
     elif Status == 3:
         ObservationStatus = False
         ObservationTime = 40
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
-        ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
+        ObservationRestarttime = datetime.now(JST) + dt.timedelta(
+            minutes=ObservationTime
+        )
         ExceptionInformation = Datas
     elif Status == 2:
         ObservationStatus = False
         ObservationTime = 60
         schedule.clear()
         schedule.every(ObservationTime).minutes.do(job)
-        ObservationRestarttime = datetime.now(JST) + dt.timedelta(minutes=ObservationTime)
+        ObservationRestarttime = datetime.now(JST) + dt.timedelta(
+            minutes=ObservationTime
+        )
         ExceptionInformation = Datas
     else:
         LastObservationResults = Datas
@@ -248,12 +260,11 @@ def job():
     print(ObservationTime)
 
 
-
 # ポート番号の設定
 if __name__ == "__main__":
     server = Thread(target=run)
     server.start()
-    
+
     messages = TextSendMessage(text=f"再販監視が開始されました")
     line_bot_api.broadcast(messages=messages)
     job()

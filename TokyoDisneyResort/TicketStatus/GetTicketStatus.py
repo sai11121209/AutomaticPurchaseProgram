@@ -7,26 +7,35 @@ import threading
 import traceback
 import requests
 import datetime
+import jpholiday
+import calendar
 from datetime import datetime as dt
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from urllib import parse
 
 
-
 def GTS():
     def query_worker(query_queue):
         try:
             query = query_queue.get()
-            responses.append({"response": requests.post(url, data=parse.urlencode(query).encode(), headers=headers), "useDateFrom": query["useDateFrom"], "commodityCd": query["commodityCd"]})
+            responses.append(
+                {
+                    "response": requests.post(
+                        url, data=parse.urlencode(query).encode(), headers=headers
+                    ),
+                    "useDateFrom": query["useDateFrom"],
+                    "commodityCd": query["commodityCd"],
+                }
+            )
             query_queue.task_done()
         except:
             responses.append({"response": "error"})
 
     maintenance_start_str = "03:00"
     maintenance_end_str = "05:00"
-    maintenance_start = dt.strptime(maintenance_start_str, '%H:%M')
-    maintenance_end = dt.strptime(maintenance_end_str, '%H:%M')
+    maintenance_start = dt.strptime(maintenance_start_str, "%H:%M")
+    maintenance_end = dt.strptime(maintenance_end_str, "%H:%M")
 
     headers = {
         "Host": "reserve.tokyodisneyresort.jp",
@@ -49,9 +58,15 @@ def GTS():
         "ランド": [],
         "シー": [],
     }
+    # 旧種別平日ランド1Dayチケット TOZZ1D20910PT [0]
+    # 新種別休日ランド1Dayチケット TOZZ1D21002PT [1]
+    # 新種別平日ランド1Dayチケット TOZZ1D21000PT [2]
+    # 旧種別平日シー1Dayチケット TOZZ1D20911PT [0]
+    # 新種別休日シー1Dayチケット TOZZ1D21003PT [1]
+    # 新種別平日シー1Dayチケット TOZZ1D21001PT [2]
     ParksPara = {
-        "ランド": "TOZZ1D20910PT",
-        "シー": "TOZZ1D20911PT",
+        "ランド": ["TOZZ1D20910PT", "TOZZ1D21002PT", "TOZZ1D21000PT"],
+        "シー": ["TOZZ1D20911PT", "TOZZ1D21003PT", "TOZZ1D21001PT"],
     }
     url = "https://reserve.tokyodisneyresort.jp/ticket/ajax/checkSaleable/"
     table_datas = []
@@ -60,18 +75,34 @@ def GTS():
     start = dt.now(pytz.timezone("Asia/Tokyo")) + datetime.timedelta(days=1)
     end = (
         dt.now(pytz.timezone("Asia/Tokyo"))
-        + relativedelta(months=1) + datetime.timedelta(days=1)
+        + relativedelta(months=1)
+        + datetime.timedelta(days=1)
     )
     table_datas = []
+    # 新種別チケット移行日
+    ChangeTicketTypeDate = dt(2021, 3, 20, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo"))
 
     for Value in ParksPara.values():
         for n in range((end - start).days):
             check = start + timedelta(n)
-            table_datas.append({
+            day_index = check.weekday()  # => 1
+            if check < ChangeTicketTypeDate:
+                commodityCd = Value[0]
+            elif (
+                jpholiday.is_holiday_name(check)
+                or calendar.day_name[day_index] == "Saturday"
+                or calendar.day_name[day_index] == "Sunday"
+            ):
+                commodityCd = Value[1]
+            else:
+                commodityCd = Value[2]
+            table_datas.append(
+                {
                     "_xhr": "",
                     "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
-                    "commodityCd": Value,
-                })
+                    "commodityCd": commodityCd,
+                }
+            )
 
     # queueを設定
     query_queue = queue.Queue()
@@ -91,7 +122,7 @@ def GTS():
             res["response"].raise_for_status()
             if res.get("error"):
                 ResponseTimeEnd = time.time()
-                ResponseTime = ResponseTimeEnd-ResponseTimeStart
+                ResponseTime = ResponseTimeEnd - ResponseTimeStart
                 print("ReadTimeout")
                 return (3, ResponseTime, res["error"])
             elif res["response"].json()["saleStatusEticket"] == "1":
@@ -100,25 +131,39 @@ def GTS():
                     "month": res["useDateFrom"][4:6],
                     "day": res["useDateFrom"][6:],
                 }
-                Available[[Key for Key, Value in ParksPara.items() if Value == res["commodityCd"]][0]].append(
-                    check["year"] + "/" + check["month"].zfill(2) +"/" + check["day"].zfill(2)
+                Available[
+                    [
+                        Key
+                        for Key, Value in ParksPara.items()
+                        if Value == res["commodityCd"]
+                    ][0]
+                ].append(
+                    check["year"]
+                    + "/"
+                    + check["month"].zfill(2)
+                    + "/"
+                    + check["day"].zfill(2)
                 )
                 print(
-                    check["year"] + "/" + check["month"].zfill(2) +"/" + check["day"].zfill(2)
+                    check["year"]
+                    + "/"
+                    + check["month"].zfill(2)
+                    + "/"
+                    + check["day"].zfill(2)
                 )
         # 403等の処理
         except requests.exceptions.RequestException as e:
             print(e)
             ResponseTimeEnd = time.time()
-            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            ResponseTime = ResponseTimeEnd - ResponseTimeStart
             if e.response.status_code == 403:
                 return (2, ResponseTime, e)
             else:
                 print(e)
-        except  json.decoder.JSONDecodeError as e:
+        except json.decoder.JSONDecodeError as e:
             ResponseTimeEnd = time.time()
-            ResponseTime = ResponseTimeEnd-ResponseTimeStart
-            exc = traceback.format_exception_only(type(e), e)[0].rstrip('\n')
+            ResponseTime = ResponseTimeEnd - ResponseTimeStart
+            exc = traceback.format_exception_only(type(e), e)[0].rstrip("\n")
             if "line 8 column 1 (char 7)" in exc:
                 print(exc)
             else:
@@ -130,17 +175,17 @@ def GTS():
         except KeyError:
             print("Server Maintenance")
             ResponseTimeEnd = time.time()
-            ResponseTime = ResponseTimeEnd-ResponseTimeStart
+            ResponseTime = ResponseTimeEnd - ResponseTimeStart
             return (4, ResponseTime, "ServerError")
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
         ResponseTimeEnd = time.time()
-        ResponseTime = ResponseTimeEnd-ResponseTimeStart
+        ResponseTime = ResponseTimeEnd - ResponseTimeStart
         print("Available")
         print(Available)
         return (1, ResponseTime, Available)
     else:
         ResponseTimeEnd = time.time()
-        ResponseTime = ResponseTimeEnd-ResponseTimeStart
+        ResponseTime = ResponseTimeEnd - ResponseTimeStart
         print("NoAvailable")
         return (0, ResponseTime, "NoAvailable")
 
