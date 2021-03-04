@@ -38,7 +38,7 @@ try:
 except ImportError:
     pass
 
-app = Flask(__name__, static_folder=None)
+app = Flask(__name__, static_folder="./static")
 print(app.url_map)
 # 環境変数取得
 if os.getenv("YOUR_CHANNEL_ACCESS_TOKEN"):
@@ -381,6 +381,7 @@ def Action(Status, Datas):
         mergeDatas.extend(Datas["ランド"])
         mergeDatas.extend(Datas["シー"])
         mergeDatas = sorted(list(set(mergeDatas)))[:20]
+        count = 0
         for mergeData in mergeDatas:
             if mergeData in Datas["ランド"]:
                 tdl = "○"
@@ -390,10 +391,15 @@ def Action(Status, Datas):
                 tds = "○"
             else:
                 tds = "×"
-            message += f"\n{mergeData[5:]}{tdl}{tds}"
+            count += 1
+            if count < 20:
+                message += f"\n{mergeData[5:]}{tdl}{tds}"
+                line_message = message
+            else:
+                line_message += f"\n{mergeData[5:]}{tdl}{tds}"
         message += "\nhttps://reserve.tokyodisneyresort.jp/sp/ticket/search/"
         print(message)
-        messages = TextSendMessage(text=message)
+        messages = TextSendMessage(text=line_message)
         t.statuses.update(status=message)
         line_bot_api.broadcast(messages=messages)
     # 0: 平常時パラメータ
@@ -470,7 +476,7 @@ def deepupdate(dict_base, other):
 def imageMap(event, type, n):
     # http://drive.google.com/uc?export=view&id={id}
     if n == 5:
-        url = "https://doc-0o-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/8gagc5q8hel71prihjlsiplim13hfrj6/1614808125000/02141497526170402220/02141497526170402220/15t_WENXmJfAGwTlvS-aS2dkwsd__0Ww8?e=view&authuser=0&nonce=bhrvct9g4nbeo&user=02141497526170402220&hash=rh9olnalu0fomll1run195kvfctfeq1p"
+        url = "https://AutomaticPurchaseProgram.sai11121209.repl.co/static/imagemap_number_of_people_5"
         action = [
             MessageImagemapAction(
                 text=f"{type}: 0", area=ImagemapArea(x=0, y=0, width=346, height=520)
@@ -494,7 +500,7 @@ def imageMap(event, type, n):
             ),
         ]
     elif n == 4:
-        url = "https://doc-0o-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/8i8jkktg1ftvvun5lc6m1rjjo2bskd92/1614808500000/02141497526170402220/02141497526170402220/1lo_FjXRpxJC3eSU3lHms0kN8zZcN9Z8h?e=view&authuser=0&nonce=1lh6h4d0leusq&user=02141497526170402220&hash=kg0q9ujcimv1lj395mgveot6ranc38rg"
+        url = "https://AutomaticPurchaseProgram.sai11121209.repl.co/static/imagemap_number_of_people_4"
         action = [
             MessageImagemapAction(
                 text=f"{type}: 0", area=ImagemapArea(x=0, y=0, width=346, height=520)
@@ -514,7 +520,7 @@ def imageMap(event, type, n):
             ),
         ]
     elif n == 3:
-        url = "https://doc-0s-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/h7fp7j889m193v2j79nl42o7m1gc79lu/1614808575000/02141497526170402220/02141497526170402220/1E5mkg_Ekz32tN7_WgKsJz5qLhzQXMuHg?e=view&authuser=0"
+        url = "https://AutomaticPurchaseProgram.sai11121209.repl.co/static/imagemap_number_of_people_3"
         action = [
             MessageImagemapAction(
                 text=f"{type}: 0", area=ImagemapArea(x=0, y=0, width=346, height=520)
@@ -530,7 +536,7 @@ def imageMap(event, type, n):
             ),
         ]
     elif n == 2:
-        url = "https://doc-0s-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/u35ojs72llte3bkve2vpc15jk2li68fh/1614808650000/02141497526170402220/02141497526170402220/14eKj5CywmjbjCsKKyIXm41L5iPRUP110?e=view&authuser=0"
+        url = "https://AutomaticPurchaseProgram.sai11121209.repl.co/static/imagemap_number_of_people_2"
         action = [
             MessageImagemapAction(
                 text=f"{type}: 0", area=ImagemapArea(x=0, y=0, width=346, height=520)
@@ -543,7 +549,7 @@ def imageMap(event, type, n):
             ),
         ]
     elif n == 1:
-        url = "https://doc-0c-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/dmgr3oun6vukuosob1t33lklu0ihf60d/1614808650000/02141497526170402220/02141497526170402220/1faJImYrVL5D860IS8dZl0o1Ssk3f8Fx3?e=view&authuser=0"
+        url = "https://AutomaticPurchaseProgram.sai11121209.repl.co/static/imagemap_number_of_people_1"
         action = [
             MessageImagemapAction(
                 text=f"{type}: 0", area=ImagemapArea(x=0, y=0, width=346, height=520)
@@ -553,13 +559,13 @@ def imageMap(event, type, n):
             ),
         ]
     elif n == 0:
-        url = "https://doc-0k-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/qqt4ddmo2gsuaup5372oopnl42gha1r6/1614808650000/02141497526170402220/02141497526170402220/107Yewl9kt7R3jT9mswgKnf2CdHeoFzKB?e=view&authuser=0"
+        url = "https://AutomaticPurchaseProgram.sai11121209.repl.co/static/imagemap_number_of_people_0"
         action = [
             MessageImagemapAction(
                 text=f"{type}: 0", area=ImagemapArea(x=0, y=0, width=346, height=520)
             ),
         ]
-
+    print(url)
     line_bot_api.reply_message(
         event.reply_token,
         [

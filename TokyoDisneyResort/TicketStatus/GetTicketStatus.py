@@ -123,7 +123,7 @@ def GTS(ParksPara):
                 ResponseTime = ResponseTimeEnd - ResponseTimeStart
                 print("ReadTimeout")
                 return (3, ResponseTime, res["error"])
-            elif res["response"].json()["saleStatusEticket"] == "3":
+            elif res["response"].json()["saleStatusEticket"] == "1":
                 check = {
                     "year": res["useDateFrom"][:4],
                     "month": res["useDateFrom"][4:6],
