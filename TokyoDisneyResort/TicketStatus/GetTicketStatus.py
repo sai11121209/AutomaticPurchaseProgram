@@ -72,6 +72,13 @@ def GTS(ParksPara):
     # 新種別チケット移行日
     ChangeTicketTypeDate = dt(2021, 3, 20, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo"))
 
+    SpecialTicketTypeDate_start = dt(
+        2021, 3, 29, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo")
+    )
+    SpecialTicketTypeDate_end = dt(
+        2021, 4, 2, 23, 59, tzinfo=pytz.timezone("Asia/Tokyo")
+    )
+
     for Value in ParksPara.values():
         for n in range((end - start).days):
             check = start + timedelta(n)
@@ -82,6 +89,7 @@ def GTS(ParksPara):
                 jpholiday.is_holiday_name(check)
                 or calendar.day_name[day_index] == "Saturday"
                 or calendar.day_name[day_index] == "Sunday"
+                or SpecialTicketTypeDate_start <= check <= SpecialTicketTypeDate_end
             ):
                 commodityCd = Value[1]
             else:
@@ -115,7 +123,7 @@ def GTS(ParksPara):
                 ResponseTime = ResponseTimeEnd - ResponseTimeStart
                 print("ReadTimeout")
                 return (3, ResponseTime, res["error"])
-            elif res["response"].json()["saleStatusEticket"] == "1":
+            elif res["response"].json()["saleStatusEticket"] == "3":
                 check = {
                     "year": res["useDateFrom"][:4],
                     "month": res["useDateFrom"][4:6],
@@ -124,7 +132,8 @@ def GTS(ParksPara):
                 Available[
                     [
                         Key
-                        for Key, Value in ParksPara.items()
+                        for Key, Values in ParksPara.items()
+                        for Value in Values
                         if Value == res["commodityCd"]
                     ][0]
                 ].append(
@@ -170,6 +179,8 @@ def GTS(ParksPara):
     if len(Available["ランド"]) != 0 or len(Available["シー"]) != 0:
         ResponseTimeEnd = time.time()
         ResponseTime = ResponseTimeEnd - ResponseTimeStart
+        for Key in Available.keys():
+            Available[Key] = sorted(Available[Key])
         print("Available")
         print(Available)
         return (1, ResponseTime, Available)
