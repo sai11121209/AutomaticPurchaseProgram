@@ -1,11 +1,17 @@
 from flask import Flask, request, abort
+import regex as re
 import requests as rq
 import schedule
 import time
 import pytz
+import json
+import jpholiday
+import calendar
+import collections
 import datetime as dt
 from datetime import datetime, timedelta, timezone
 from GetTicketStatus import GTS
+from dateutil.relativedelta import relativedelta
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
@@ -14,6 +20,13 @@ from linebot.models import (
     TextMessage,
     TextSendMessage,
     MessageAction,
+    PostbackAction,
+    TemplateSendMessage,
+    PostbackEvent,
+    ImagemapSendMessage,
+    MessageImagemapAction,
+    BaseSize,
+    ImagemapArea,
 )
 from threading import Thread
 import os
@@ -24,8 +37,8 @@ try:
 except ImportError:
     pass
 
-app = Flask(__name__)
-
+app = Flask(__name__, static_folder=None)
+print(app.url_map)
 # 環境変数取得
 if os.getenv("YOUR_CHANNEL_ACCESS_TOKEN"):
     YOUR_CHANNEL_ACCESS_TOKEN = os.getenv("YOUR_CHANNEL_ACCESS_TOKEN")
@@ -56,10 +69,26 @@ maintenance_end_str = "05:00"
 maintenance_start = dt.datetime.strptime(maintenance_start_str, "%H:%M")
 maintenance_end = dt.datetime.strptime(maintenance_end_str, "%H:%M")
 
+# 旧種別平日ランド1Dayチケット TOZZ1D20910PT [0]
+# 新種別休日ランド1Dayチケット TOZZ1D21002PT [1]
+# 新種別平日ランド1Dayチケット TOZZ1D21000PT [2]
+# 旧種別平日シー1Dayチケット TOZZ1D20911PT [0]
+# 新種別休日シー1Dayチケット TOZZ1D21003PT [1]
+# 新種別平日シー1Dayチケット TOZZ1D21001PT [2]
+ParksPara = {
+    "ランド": ["TOZZ1D20910PT", "TOZZ1D21002PT", "TOZZ1D21000PT"],
+    "シー": ["TOZZ1D20911PT", "TOZZ1D21003PT", "TOZZ1D21001PT"],
+}
+
+# チケット種別変更日
+ChangeTicketTypeDate = dt.datetime(2021, 3, 20, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo"))
+
 ResponseTime = 0
 ResponseTimeMin = 3
 
 ExceptionInformation = None
+
+UserData = {}
 
 
 @app.route("/")
@@ -134,7 +163,6 @@ def main():
     Text += f"<p>Message Remaining: {1000-MessageLimit}</p>"
     return Text
 
-
 ## 1 ##
 # Webhookからのリクエストをチェックします。
 @app.route("/callback", methods=["POST"])
@@ -154,6 +182,8 @@ def callback():
     except InvalidSignatureError:
         abort(400)
     # handleの処理を終えればOK
+    except:
+        pass
     return "OK"
 
 
@@ -174,10 +204,105 @@ def run():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    line_bot_api.reply_message(
-        event.reply_token, TextSendMessage(text=event.message.text)
-    )  # ここでオウム返しのメッセージを返します。
-    # line_bot_api.broadcast()
+    global UserData
+    UserId = event.source.user_id
+    if event.message.text == "> チケットURL生成":
+        line_bot_api.reply_message(
+            event.reply_token, TemplateSendMessage(
+                alt_text='Buttons template',
+                template=ButtonsTemplate(
+                    title="パーク選択",
+                    text="チケットを取りたいパークを選択してください。",
+                    actions=[
+                            PostbackAction(label="東京ディズニーランド", display_text="東京ディズニーランド", data=json.dumps({event.source.user_id: {"status": 0, "park": "01"}})), 
+                            PostbackAction(label="東京ディズニーシー", display_text="東京ディズニーシー", data=json.dumps({event.source.user_id: {"status": 0, "park": "02"}}))
+                        ]
+                )
+            )
+        )
+    p = re.compile(r'\p{Script=Han}+: [0-9]')
+    try:
+        search_start = datetime.now(pytz.timezone("Asia/Tokyo"))
+        search_end = (
+            datetime.now(pytz.timezone("Asia/Tokyo"))
+            + relativedelta(months=1)
+            + dt.timedelta(days=1)
+        )
+        now = datetime.now(pytz.timezone("Asia/Tokyo"))
+        now_str = now.strftime('%Y-%m-%d')
+        search_start_str = search_start.strftime('%Y-%m-%d')
+        search_end_str = search_end.strftime('%Y-%m-%d')
+        match = p.fullmatch(event.message.text).group().split(" ")
+        if match[0] == "大人:":
+            UserData[UserId]["status"] = 2
+            UserData[UserId]["adult"] = int(match[1])
+            imageMap(event, "中人", 5-UserData[UserId]["adult"])
+        if match[0] == "中人:":
+            UserData[UserId]["status"] = 3
+            UserData[UserId]["junior"] = int(match[1])
+            imageMap(event, "小人", 5-UserData[UserId]["adult"]-UserData[UserId]["junior"])
+        if match[0] == "小人:":
+            UserData[UserId]["status"] = 4
+            UserData[UserId]["child"] = int(match[1])
+            line_bot_api.reply_message(
+                event.reply_token, TemplateSendMessage(
+                    alt_text='Buttons template',
+                    template=ButtonsTemplate(
+                        title="パーク選択",
+                        text="チケットを取りたいパークを選択してください。",
+                        actions=[
+                                    {
+                                    "type": "datetimepicker",
+                                    "label": "日時を選択してください。",
+                                    "data": "action=settime",
+                                    "mode": "date",
+                                    "initial": now_str,
+                                    "max": search_end_str,
+                                    "min": search_start_str
+                                }
+                            ]
+                    )
+                )
+            )
+    except:
+        pass
+    print(UserData)
+    
+
+@handler.add(PostbackEvent)
+def on_postback(event):
+    global UserData
+    UserId = event.source.user_id
+    try:
+        UserData[UserId].update(status=5, date=event.postback.params["date"])
+        print(UserData[UserId]["date"])
+        selectday = dt.datetime.strptime(UserData[UserId]["date"]+"+0900", '%Y-%m-%d%z')
+        day_index = selectday.weekday()
+        park = UserData[UserId]["park"]
+        if park == "01":
+            park_name = "東京ディズニーランド"
+        else:
+            park_name = "東京ディズニーシー"
+        junior = UserData[UserId]["junior"]
+        adult = UserData[UserId]["adult"]
+        child = UserData[UserId]["child"]
+        day=UserData[UserId]["date"].replace("-", "")
+        if selectday < ChangeTicketTypeDate:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"{park_name}\n1Day\n{UserData[UserId]['date']}\n大人: {adult}人\n中人: {junior}人\n小人: {child}人\nhttps://reserve.tokyodisneyresort.jp/sp/ticket/search/?parkTicketGroupCd=01&route=2&selectParkDay1={park}&useDays=1&numOfJunior={junior}&useDateFrom={day}&parkTicketSalesForm=1&numOfAdult={adult}&numOfChild={child}"))
+        elif (
+                jpholiday.is_holiday_name(selectday)
+                or calendar.day_name[day_index] == "Saturday"
+                or calendar.day_name[day_index] == "Sunday"
+            ):
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"{park_name}\n休日1Day\n{UserData[UserId]['date']}\n大人: {adult}人\n中人: {junior}人\n小人: {child}人\nhttps://reserve.tokyodisneyresort.jp/sp/ticket/search/?parkTicketGroupCd=012&route=2&selectParkDay1={park}&useDays=1&numOfJunior={junior}&useDateFrom={day}&parkTicketSalesForm=1&numOfAdult={adult}&numOfChild={child}"))
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"{park_name}\n平日1Day\n{UserData[UserId]['date']}\n大人: {adult}人\n中人: {junior}人\n小人: {child}人\nhttps://reserve.tokyodisneyresort.jp/sp/ticket/search/?parkTicketGroupCd=011&route=2&selectParkDay1={park}&useDays=1&numOfJunior={junior}&useDateFrom={day}&parkTicketSalesForm=1&numOfAdult={adult}&numOfChild={child}"))
+    except:
+        deepupdate(UserData, json.loads(event.postback.data))
+    if UserData[UserId]["status"] == 0:
+        imageMap(event, "大人", 5)
+
+
 
 
 def Action(Status, Datas):
@@ -224,7 +349,7 @@ def job():
     if ObservationStatus == False:
         ObservationStatus = True
         StateSwitch()
-    Status, ResponseTime, Datas = GTS()
+    Status, ResponseTime, Datas = GTS(ParksPara)
     Action(Status, Datas)
     if ResponseTime < ResponseTimeMin:
         ResponseTimeMin = ResponseTime
@@ -269,6 +394,174 @@ def job():
         LastExecutionTime = datetime.now(JST)
     print(ObservationTime)
 
+def deepupdate(dict_base, other):
+  for k, v in other.items():
+    if isinstance(v, collections.Mapping) and k in dict_base:
+      deepupdate(dict_base[k], v)
+    else:
+      dict_base[k] = v
+
+def imageMap(event, type, n):
+    # http://drive.google.com/uc?export=view&id={id}
+    if n == 5:
+        url = 'https://doc-0o-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/8gagc5q8hel71prihjlsiplim13hfrj6/1614808125000/02141497526170402220/02141497526170402220/15t_WENXmJfAGwTlvS-aS2dkwsd__0Ww8?e=view&authuser=0&nonce=bhrvct9g4nbeo&user=02141497526170402220&hash=rh9olnalu0fomll1run195kvfctfeq1p'
+        action = [
+            MessageImagemapAction(
+                text=f'{type}: 0',
+                area=ImagemapArea(
+                    x=0, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 1',
+                area=ImagemapArea(
+                    x=347, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 2',
+                area=ImagemapArea(
+                    x=694, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 3',
+                area=ImagemapArea(
+                    x=0, y=520, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 4',
+                area=ImagemapArea(
+                    x=347, y=520, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 5',
+                area=ImagemapArea(
+                    x=693, y=520, width=346, height=520
+                )
+            )
+        ]
+    elif n == 4:
+        url = 'https://doc-0o-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/8i8jkktg1ftvvun5lc6m1rjjo2bskd92/1614808500000/02141497526170402220/02141497526170402220/1lo_FjXRpxJC3eSU3lHms0kN8zZcN9Z8h?e=view&authuser=0&nonce=1lh6h4d0leusq&user=02141497526170402220&hash=kg0q9ujcimv1lj395mgveot6ranc38rg'
+        action = [
+            MessageImagemapAction(
+                text=f'{type}: 0',
+                area=ImagemapArea(
+                    x=0, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 1',
+                area=ImagemapArea(
+                    x=347, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 2',
+                area=ImagemapArea(
+                    x=694, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 3',
+                area=ImagemapArea(
+                    x=0, y=520, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 4',
+                area=ImagemapArea(
+                    x=347, y=520, width=346, height=520
+                )
+            ),
+        ]
+    elif n == 3:
+        url = 'https://doc-0s-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/h7fp7j889m193v2j79nl42o7m1gc79lu/1614808575000/02141497526170402220/02141497526170402220/1E5mkg_Ekz32tN7_WgKsJz5qLhzQXMuHg?e=view&authuser=0'
+        action = [
+            MessageImagemapAction(
+                text=f'{type}: 0',
+                area=ImagemapArea(
+                    x=0, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 1',
+                area=ImagemapArea(
+                    x=347, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 2',
+                area=ImagemapArea(
+                    x=694, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 3',
+                area=ImagemapArea(
+                    x=0, y=520, width=346, height=520
+                )
+            ),
+        ]
+    elif n == 2:
+        url = 'https://doc-0s-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/u35ojs72llte3bkve2vpc15jk2li68fh/1614808650000/02141497526170402220/02141497526170402220/14eKj5CywmjbjCsKKyIXm41L5iPRUP110?e=view&authuser=0'
+        action = [
+            MessageImagemapAction(
+                text=f'{type}: 0',
+                area=ImagemapArea(
+                    x=0, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 1',
+                area=ImagemapArea(
+                    x=347, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 2',
+                area=ImagemapArea(
+                    x=694, y=0, width=346, height=520
+                )
+            ),
+        ]
+    elif n == 1:
+        url = 'https://doc-0c-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/dmgr3oun6vukuosob1t33lklu0ihf60d/1614808650000/02141497526170402220/02141497526170402220/1faJImYrVL5D860IS8dZl0o1Ssk3f8Fx3?e=view&authuser=0'
+        action = [
+            MessageImagemapAction(
+                text=f'{type}: 0',
+                area=ImagemapArea(
+                    x=0, y=0, width=346, height=520
+                )
+            ),
+            MessageImagemapAction(
+                text=f'{type}: 1',
+                area=ImagemapArea(
+                    x=347, y=0, width=346, height=520
+                )
+            ),
+        ]
+    elif n == 0:
+        url = 'https://doc-0k-0o-docs.googleusercontent.com/docs/securesc/entjtkfrdbidgmvlo9g0siqtt6jblp15/qqt4ddmo2gsuaup5372oopnl42gha1r6/1614808650000/02141497526170402220/02141497526170402220/107Yewl9kt7R3jT9mswgKnf2CdHeoFzKB?e=view&authuser=0'
+        action = [
+            MessageImagemapAction(
+                text=f'{type}: 0',
+                area=ImagemapArea(
+                    x=0, y=0, width=346, height=520
+                )
+            ),
+        ]
+
+    line_bot_api.reply_message(
+        event.reply_token, [TextSendMessage(text=f"{type}の人数を選択してください。"), ImagemapSendMessage(
+            base_url=url,
+            alt_text='this is an imagemap',
+            base_size=BaseSize(height=1040, width=1040),
+            actions=action
+        )]
+    )
 
 # ポート番号の設定
 if __name__ == "__main__":
@@ -276,7 +569,7 @@ if __name__ == "__main__":
     server.start()
 
     messages = TextSendMessage(text=f"再販監視が開始されました")
-    # line_bot_api.broadcast(messages=messages)
+    line_bot_api.broadcast(messages=messages)
     job()
     ObservationTime = ObservationTime
     # {ObservationTime}分ごとに実行

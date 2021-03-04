@@ -15,7 +15,7 @@ from dateutil.relativedelta import relativedelta
 from urllib import parse
 
 
-def GTS():
+def GTS(ParksPara):
     def query_worker(query_queue):
         try:
             query = query_queue.get()
@@ -57,16 +57,6 @@ def GTS():
     Available = {
         "ランド": [],
         "シー": [],
-    }
-    # 旧種別平日ランド1Dayチケット TOZZ1D20910PT [0]
-    # 新種別休日ランド1Dayチケット TOZZ1D21002PT [1]
-    # 新種別平日ランド1Dayチケット TOZZ1D21000PT [2]
-    # 旧種別平日シー1Dayチケット TOZZ1D20911PT [0]
-    # 新種別休日シー1Dayチケット TOZZ1D21003PT [1]
-    # 新種別平日シー1Dayチケット TOZZ1D21001PT [2]
-    ParksPara = {
-        "ランド": ["TOZZ1D20910PT", "TOZZ1D21002PT", "TOZZ1D21000PT"],
-        "シー": ["TOZZ1D20911PT", "TOZZ1D21003PT", "TOZZ1D21001PT"],
     }
     url = "https://reserve.tokyodisneyresort.jp/ticket/ajax/checkSaleable/"
     table_datas = []
