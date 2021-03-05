@@ -99,6 +99,13 @@ ParksPara = {
 ChangeTicketTypeDate = dt.datetime(
     2021, 3, 20, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo")
 )
+# 特別価格指定日
+SpecialTicketTypeDate_start = dt.datetime(
+        2021, 3, 29, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo")
+    )
+SpecialTicketTypeDate_end = dt.datetime(
+    2021, 4, 2, 23, 59, tzinfo=pytz.timezone("Asia/Tokyo")
+)
 
 ResponseTime = 0
 ResponseTimeMin = 3
@@ -231,6 +238,7 @@ def handle_message(event):
                 alt_text="Buttons template",
                 template=ButtonsTemplate(
                     title="パーク選択",
+                    alt_text="パーク選択",
                     text="チケットを取りたいパークを選択してください。",
                     actions=[
                         PostbackAction(
@@ -282,12 +290,13 @@ def handle_message(event):
                 TemplateSendMessage(
                     alt_text="Buttons template",
                     template=ButtonsTemplate(
-                        title="パーク選択",
-                        text="チケットを取りたいパークを選択してください。",
+                        title="日付選択",
+                        alt_text="日付選択",
+                        text="チケットを取りたい日付選択してください。",
                         actions=[
                             {
                                 "type": "datetimepicker",
-                                "label": "日時を選択してください。",
+                                "label": "日付を選択してください。",
                                 "data": "action=settime",
                                 "mode": "date",
                                 "initial": now_str,
@@ -334,6 +343,7 @@ def on_postback(event):
             jpholiday.is_holiday_name(selectday)
             or calendar.day_name[day_index] == "Saturday"
             or calendar.day_name[day_index] == "Sunday"
+            or SpecialTicketTypeDate_start <= selectday <= SpecialTicketTypeDate_end
         ):
             line_bot_api.reply_message(
                 event.reply_token,
@@ -359,11 +369,19 @@ def Action(Status, Datas):
     if Status == 4:
         message = "サーバメンテナンス中のため2時間監視を停止します。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
         messages = TextSendMessage(text=message)
+        try:
+            t.statuses.update(status=message)
+        except:
+            print("Twittererror")
         line_bot_api.broadcast(messages=messages)
     # 3: リクエストタイムアウトパラメータ
     elif Status == 3:
         message = "サーバへのリクエスト時間が非常に長くなっているため40分間監視を一時停止します。\n再販の可能性あり。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
         messages = TextSendMessage(text=message)
+        try:
+            t.statuses.update(status=message)
+        except:
+            print("Twittererror")
         line_bot_api.broadcast(messages=messages)
     # 2: 403エラーパラメータ
     elif Status == 2:
@@ -371,7 +389,10 @@ def Action(Status, Datas):
             "アクセス集中による403エラー回避のため1時間監視を停止します。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
         )
         messages = TextSendMessage(text=message)
-        t.statuses.update(status=message)
+        try:
+            t.statuses.update(status=message)
+        except:
+            print("Twittererror")
         line_bot_api.broadcast(messages=messages)
     # 1: 再販確認時パラメータ
     elif Status == 1:
@@ -400,7 +421,10 @@ def Action(Status, Datas):
         message += "\nhttps://reserve.tokyodisneyresort.jp/sp/ticket/search/"
         print(message)
         messages = TextSendMessage(text=line_message)
-        t.statuses.update(status=message)
+        try:
+            t.statuses.update(status=message)
+        except:
+            print("Twittererror")
         line_bot_api.broadcast(messages=messages)
     # 0: 平常時パラメータ
     else:
@@ -410,7 +434,10 @@ def Action(Status, Datas):
 def StateSwitch():
     message = "監視を再開します。"
     messages = TextSendMessage(text=message)
-    t.statuses.update(status=message)
+    try:
+        t.statuses.update(status=message)
+    except:
+        print("Twittererror")
     line_bot_api.broadcast(messages=messages)
 
 
@@ -572,7 +599,7 @@ def imageMap(event, type, n):
             TextSendMessage(text=f"{type}の人数を選択してください。"),
             ImagemapSendMessage(
                 base_url=url,
-                alt_text="this is an imagemap",
+                alt_text=f"{type}の人数を選択してください。",
                 base_size=BaseSize(height=1040, width=1040),
                 actions=action,
             ),
