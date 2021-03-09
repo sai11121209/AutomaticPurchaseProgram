@@ -155,7 +155,10 @@ def GTS(ParksPara):
             print(e)
             ResponseTimeEnd = time.time()
             ResponseTime = ResponseTimeEnd - ResponseTimeStart
-            if e.response.status_code == 403:
+            now = dt.now(pytz.timezone("Asia/Tokyo"))
+            if maintenance_start.time() <= now.time() <= maintenance_end.time():
+                return (4, ResponseTime, "ServerError")
+            elif e.response.status_code == 403:
                 return (2, ResponseTime, e)
             else:
                 print(e)
