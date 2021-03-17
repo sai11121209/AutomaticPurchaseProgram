@@ -183,6 +183,9 @@ def main():
                 Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
             Text += "<h3>Response Details</h3>"
             Text += f"<p> {ExceptionInformation}</p>"
+    Text += "<h3>Network Information</h3>"
+    ip = rq.get('http://inet-ip.info/ip')
+    Text += f"<p>Global IP Address: {ip.text}"
     Text += "<h3>Line Bot Information</h3>"
     Text += f"<p>Message Remaining: {1000-MessageLimit}</p>"
     return Text
