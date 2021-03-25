@@ -376,7 +376,10 @@ def Action(Status, Datas):
             t.statuses.update(status=message)
         except:
             print("Twittererror")
-        line_bot_api.broadcast(messages=messages)
+        try:
+            line_bot_api.broadcast(messages=messages)
+        except:
+            print("Lineerror")
     # 3: リクエストタイムアウトパラメータ
     elif Status == 3:
         message = "サーバへのリクエスト時間が非常に長くなっているため40分間監視を一時停止します。\n再販の可能性あり。\n監視再開時間等の情報を確認するには'監視ステータス確認'から確認できます。"
@@ -385,7 +388,10 @@ def Action(Status, Datas):
             t.statuses.update(status=message)
         except:
             print("Twittererror")
-        line_bot_api.broadcast(messages=messages)
+            try:
+                line_bot_api.broadcast(messages=messages)
+            except:
+                print("Lineerror")
     # 2: 403エラーパラメータ
     elif Status == 2:
         message = (
@@ -396,7 +402,10 @@ def Action(Status, Datas):
             t.statuses.update(status=message)
         except:
             print("Twittererror")
-        line_bot_api.broadcast(messages=messages)
+        try:
+            line_bot_api.broadcast(messages=messages)
+        except:
+            print("Lineerror")
     # 1: 再販確認時パラメータ
     elif Status == 1:
         message = "再販あり\n以下直近20件\n"
@@ -428,7 +437,10 @@ def Action(Status, Datas):
             t.statuses.update(status=message)
         except:
             print("Twittererror")
-        line_bot_api.broadcast(messages=messages)
+        try:
+            line_bot_api.broadcast(messages=messages)
+        except:
+            print("Lineerror")
     # 0: 平常時パラメータ
     else:
         pass
@@ -441,7 +453,10 @@ def StateSwitch():
         t.statuses.update(status=message)
     except:
         print("Twittererror")
-    line_bot_api.broadcast(messages=messages)
+    try:
+        line_bot_api.broadcast(messages=messages)
+    except:
+        print("Lineerror")
 
 
 def job():
