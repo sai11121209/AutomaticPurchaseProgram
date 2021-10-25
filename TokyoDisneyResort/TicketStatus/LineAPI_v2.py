@@ -85,14 +85,17 @@ maintenance_start = dt.datetime.strptime(maintenance_start_str, "%H:%M")
 maintenance_end = dt.datetime.strptime(maintenance_end_str, "%H:%M")
 
 # 旧種別平日ランド1Dayチケット TOZZ1D20910PT [0]
-# 新種別休日ランド1Dayチケット TOZZ1D21002PT [1]
-# 新種別平日ランド1Dayチケット TOZZ1D21000PT [2]
+# 旧種別休日ランド1Dayチケット TOZZ1D21002PT [1]
+# 旧種別平日ランド1Dayチケット TOZZ1D21000PT [2]
+# 新種別平日ランド1Dayチケット TOZZ1D21030PT [3]
+
 # 旧種別平日シー1Dayチケット TOZZ1D20911PT [0]
-# 新種別休日シー1Dayチケット TOZZ1D21003PT [1]
-# 新種別平日シー1Dayチケット TOZZ1D21001PT [2]
+# 旧種別休日シー1Dayチケット TOZZ1D21003PT [1]
+# 旧種別平日シー1Dayチケット TOZZ1D21001PT [2]
+# 新種別平日シー1Dayチケット TOZZ1D21031PT [3]
 ParksPara = {
-    "ランド": ["TOZZ1D20910PT", "TOZZ1D21002PT", "TOZZ1D21000PT"],
-    "シー": ["TOZZ1D20911PT", "TOZZ1D21003PT", "TOZZ1D21001PT"],
+    "ランド": ["TOZZ1D20910PT", "TOZZ1D21002PT", "TOZZ1D21000PT", "TOZZ1D21030PT"],
+    "シー": ["TOZZ1D20911PT", "TOZZ1D21003PT", "TOZZ1D21001PT", "TOZZ1D21031PT"],
 }
 
 # チケット種別変更日
@@ -101,8 +104,8 @@ ChangeTicketTypeDate = dt.datetime(
 )
 # 特別価格指定日
 SpecialTicketTypeDate_start = dt.datetime(
-        2021, 3, 29, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo")
-    )
+    2021, 3, 29, 0, 0, tzinfo=pytz.timezone("Asia/Tokyo")
+)
 SpecialTicketTypeDate_end = dt.datetime(
     2021, 4, 2, 23, 59, tzinfo=pytz.timezone("Asia/Tokyo")
 )
@@ -184,7 +187,7 @@ def main():
             Text += "<h3>Response Details</h3>"
             Text += f"<p> {ExceptionInformation}</p>"
     Text += "<h3>Network Information</h3>"
-    ip = rq.get('http://inet-ip.info/ip')
+    ip = rq.get("http://inet-ip.info/ip")
     Text += f"<p>Global IP Address: {ip.text}"
     Text += "<h3>Line Bot Information</h3>"
     Text += f"<p>Message Remaining: {1000-MessageLimit}</p>"

@@ -85,6 +85,9 @@ def GTS(ParksPara):
             day_index = check.weekday()  # => 1
             if check < ChangeTicketTypeDate:
                 commodityCd = Value[0]
+            else:
+                commodityCd = Value[3]
+            """
             elif (
                 jpholiday.is_holiday_name(check)
                 or calendar.day_name[day_index] == "Saturday"
@@ -92,8 +95,8 @@ def GTS(ParksPara):
                 or SpecialTicketTypeDate_start <= check <= SpecialTicketTypeDate_end
             ):
                 commodityCd = Value[1]
-            else:
-                commodityCd = Value[2]
+                print("A")
+            """
             table_datas.append(
                 {
                     "_xhr": "",
