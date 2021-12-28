@@ -15,7 +15,7 @@ from dateutil.relativedelta import relativedelta
 from urllib import parse
 
 
-def GTS(ParksPara):
+def GTS(ParksPara, designated_date):
     def query_worker(query_queue):
         try:
             query = query_queue.get()
@@ -80,30 +80,34 @@ def GTS(ParksPara):
     )
 
     for Value in ParksPara.values():
-        for n in range((end - start).days):
-            check = start + timedelta(n)
-            day_index = check.weekday()  # => 1
-            if check < ChangeTicketTypeDate:
-                commodityCd = Value[0]
-            else:
-                commodityCd = Value[3]
-            """
-            elif (
-                jpholiday.is_holiday_name(check)
-                or calendar.day_name[day_index] == "Saturday"
-                or calendar.day_name[day_index] == "Sunday"
-                or SpecialTicketTypeDate_start <= check <= SpecialTicketTypeDate_end
-            ):
-                commodityCd = Value[1]
-                print("A")
-            """
+        if designated_date and int(
+            f"{start.year}{str(start.month).zfill(2)}{str(start.day).zfill(2)}"
+        ) <= int(designated_date) <= int(
+            f"{end.year}{str(end.month).zfill(2)}{str(end.day).zfill(2)}"
+        ):
+            commodityCd = Value[3]  # 3新種別 種別変更時変更!!!!
             table_datas.append(
                 {
                     "_xhr": "",
-                    "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
+                    "useDateFrom": designated_date,
                     "commodityCd": commodityCd,
                 }
             )
+        else:
+            for n in range((end - start).days):
+                check = start + timedelta(n)
+                if check < ChangeTicketTypeDate:
+                    commodityCd = Value[0]
+                else:
+                    commodityCd = Value[3]  # 3新種別 種別変更時変更!!!!
+                table_datas.append(
+                    {
+                        "_xhr": "",
+                        "useDateFrom": f"{check.year}{str(check.month).zfill(2)}{str(check.day).zfill(2)}",
+                        "commodityCd": commodityCd,
+                    }
+                )
+        print(table_datas)
 
     # queueを設定
     query_queue = queue.Queue()

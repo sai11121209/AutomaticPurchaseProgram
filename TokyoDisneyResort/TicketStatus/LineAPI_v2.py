@@ -467,7 +467,7 @@ def job():
     if ObservationStatus == False:
         ObservationStatus = True
         StateSwitch()
-    Status, ResponseTime, Datas = GTS(ParksPara)
+    Status, ResponseTime, Datas = GTS(ParksPara, "20220103")  # 指定日検索の場合入力、横断検索の場合None
     Action(Status, Datas)
     if ResponseTime < ResponseTimeMin:
         ResponseTimeMin = ResponseTime
