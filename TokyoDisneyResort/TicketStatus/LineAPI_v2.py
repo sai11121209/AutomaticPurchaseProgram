@@ -71,9 +71,9 @@ LastObservationResults = None
 ObservationRestarttime = None
 ObservationStatus = True
 ObservationTime = 0
-BaseObservationTime = 2
-LowObservationTime = 5
-MaintenanceObservationTime = 120
+BaseObservationTime = 10
+LowObservationTime = 20
+MaintenanceObservationTime = 7200
 
 start_str = "00:00"
 end_str = "12:00"
@@ -133,10 +133,10 @@ def main():
             LastExecutionTimeToStr = LastExecutionTime.strftime("%Y/%m/%d %H:%M:%S")
             Text += "<h1>ステータス: <font color='lime'>●</font></h1>"
             if ResponseTime - ResponseTimeMin <= 3:
-                Text += f"<h2>現在{ObservationTime}分間隔で正常に監視を行っております。</h2>"
+                Text += f"<h2>現在{ObservationTime/60}分間隔で正常に監視を行っております。</h2>"
             elif ResponseTime - ResponseTimeMin > 3:
-                Text += f"<h2>現在{ObservationTime}分間隔で監視を行っておりますが通常時に比べレスポンス時間が長くなっておりサイトの混雑が予想されます。</h2>"
-            Text += f"<p>本Botは基本的に{BaseObservationTime}分間隔で再販監視を行っておりますが、サーバへの負荷を最小限に抑えるため{start_str}～{end_str}の時間帯は{LowObservationTime}分間隔で監視を行っております。</p>"
+                Text += f"<h2>現在{ObservationTime/60}分間隔で監視を行っておりますが通常時に比べレスポンス時間が長くなっておりサイトの混雑が予想されます。</h2>"
+            Text += f"<p>本Botは基本的に{BaseObservationTime/60}分間隔で再販監視を行っておりますが、サーバへの負荷を最小限に抑えるため{start_str}～{end_str}の時間帯は{LowObservationTime/60}分間隔で監視を行っております。</p>"
             Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
             Text += "<h3>Response Information</h3>"
             Text += f"<p>Response Time: {ResponseTime}<br>"
@@ -157,7 +157,7 @@ def main():
         ObservationRestarttimeToStr = ObservationRestarttime.strftime(
             "%Y/%m/%d %H:%M:%S"
         )
-        if ObservationTime == 120:
+        if ObservationTime == 7200:
             Text += "<h1>ステータス: <font color='red'>▲</font></h1>"
             Text += "<h2>現在東京ディズニーリゾートオンライン予約・購入サイトのメンテナンスのため監視を一時停止しております。</h2>"
             Text += f"<h2>監視再開予定時刻: {ObservationRestarttimeToStr}\n</h2>"
@@ -166,7 +166,7 @@ def main():
                 Text += f"<h3>最終監視時刻: {LastExecutionTimeToStr}</h3>"
             Text += "<h3>Response Details</h3>"
             Text += f"<p> {ExceptionInformation}</p>"
-        elif ObservationTime == 20:
+        elif ObservationTime == 1200:
             Text += "<h1>ステータス: <font color='red'>▲</font></h1>"
             Text += "<h2>現在東京ディズニーリゾートオンライン予約・購入サイトへのリクエスト時間が長くなっているため監視を一時停止しております。再販の可能性もあるため予約・購入サイトへのアクセスをおすすめします。</h2>"
             Text += f"<h2>監視再開予定時刻: {ObservationRestarttimeToStr}\n</h2>"
@@ -473,29 +473,29 @@ def job():
         ResponseTimeMin = ResponseTime
     if Status == 4:
         ObservationStatus = False
-        ObservationTime = 120
+        ObservationTime = 7200
         schedule.clear()
-        schedule.every(ObservationTime).minutes.do(job)
+        schedule.every(ObservationTime).seconds.do(job)
         ObservationRestarttime = datetime.now(JST) + dt.timedelta(
-            minutes=ObservationTime
+            minutes=ObservationTime / 60
         )
         ExceptionInformation = Datas
     elif Status == 3:
         ObservationStatus = False
-        ObservationTime = 40
+        ObservationTime = 2400
         schedule.clear()
-        schedule.every(ObservationTime).minutes.do(job)
+        schedule.every(ObservationTime).seconds.do(job)
         ObservationRestarttime = datetime.now(JST) + dt.timedelta(
-            minutes=ObservationTime
+            minutes=ObservationTime / 60
         )
         ExceptionInformation = Datas
     elif Status == 2:
         ObservationStatus = False
-        ObservationTime = 60
+        ObservationTime = 3600
         schedule.clear()
-        schedule.every(ObservationTime).minutes.do(job)
+        schedule.every(ObservationTime).seconds.do(job)
         ObservationRestarttime = datetime.now(JST) + dt.timedelta(
-            minutes=ObservationTime
+            minutes=ObservationTime / 60
         )
         ExceptionInformation = Datas
     else:
@@ -508,7 +508,7 @@ def job():
         else:
             ObservationTime = BaseObservationTime
         schedule.clear()
-        schedule.every(ObservationTime).minutes.do(job)
+        schedule.every(ObservationTime).seconds.do(job)
         LastExecutionTime = datetime.now(JST)
     print(ObservationTime)
 
@@ -638,7 +638,7 @@ if __name__ == "__main__":
     job()
     ObservationTime = ObservationTime
     # {ObservationTime}分ごとに実行
-    schedule.every(ObservationTime).minutes.do(job)
+    schedule.every(ObservationTime).seconds.do(job)
 
     while True:
         schedule.run_pending()
